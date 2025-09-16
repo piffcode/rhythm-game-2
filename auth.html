@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Game - Sign In</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1db954 0%, #191414 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .auth-container {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .logo {
+            font-size: 2.5em;
+            color: #1db954;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+        }
+        
+        .spotify-btn {
+            background: #1db954;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .spotify-btn:hover {
+            background: #1ed760;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(29, 185, 84, 0.3);
+        }
+        
+        .spotify-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .loading {
+            color: #1db954;
+            margin-top: 20px;
+        }
+        
+        .note {
+            color: #b3b3b3;
+            font-size: 14px;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(29, 185, 84, 0.3);
+            border-top: 3px solid #1db954;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">🎵</div>
+        <h1>Rhythm Game</h1>
+        
+        <div id="error-container"></div>
+        
+        <div id="auth-section">
+            <button id="spotify-login" class="spotify-btn">
+                Sign in with Spotify
+            </button>
+            <div class="note">
+                You'll need Spotify Premium to play full tracks.<br>
+                We only access your basic profile and create a private playlist.
+            </div>
+        </div>
+        
+        <div id="loading-section" style="display: none;">
+            <div class="spinner"></div>
+            <div class="loading">Connecting to Spotify...</div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { CONFIG } from './config.js';
+        console.log('CONFIG loaded:', CONFIG); // Debug: Check if import succeeds
+        
+        // --- OAuth / Routing --- Use config for env-specific values
+        const CLIENT_ID = CONFIG.CLIENT_ID;
+        const REDIRECT_URI = CONFIG.REDIRECT_URI;
+        const NEXT_URL = CONFIG.NEXT_URL;
+        
+        // Required scopes
+        const SCOPES = [
+            'user-read-email',
+            'user-read-private',
+            'user-modify-playback-state',
+            'user-read-playback-state',
+            'playlist-modify-private',
+            'playlist-modify-public',
+            'user-library-modify'
+        ].join(' ');
+
+        // PKCE helpers
+        function generateCodeVerifier() {
+            const array = new Uint8Array(96);
+            crypto.getRandomValues(array);
+            return btoa(String.fromCharCode.apply(null, array))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '')
+                .substring(0, 96);
+        }
+
+        async function generateCodeChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const digest = await crypto.subtle.digest('SHA-256', data);
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+
+        function showError(message) {
+            const container = document.getElementById('error-container');
+            container.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function showLoading(show = true) {
+            document.getElementById('auth-section').style.display = show ? 'none' : 'block';
+            document.getElementById('loading-section').style.display = show ? 'block' : 'none';
+        }
+
+        // Encrypt refresh token helper
+        async function encryptRefresh(token, userId) {
+            try {
+                const encoder = new TextEncoder();
+                const salt = encoder.encode(CONFIG.ENCRYPTION_SALT + userId);
+                const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(userId), { name: 'PBKDF2' }, false, ['deriveKey']);
+                const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(token));
+                const combined = new Uint8Array(iv.length + encrypted.byteLength);
+                combined.set(iv);
+                combined.set(new Uint8Array(encrypted), iv.length);
+                return btoa(String.fromCharCode(...combined));
+            } catch (error) {
+                throw new Error('Encryption failed: ' + error.message);
+            }
+        }
+
+        // Handle OAuth callback
+        async function handleCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const error = urlParams.get('error');
+            const state = urlParams.get('state');
+
+            if (error) {
+                if (error === 'access_denied') {
+                    showError('Access denied. You need to grant permissions to use this app.');
+                } else {
+                    showError(`Authentication error: ${error}`);
+                }
+                return;
+            }
+
+            if (!code) return; // Not a callback
+
+            showLoading(true);
+
+            const codeVerifier = sessionStorage.getItem('code_verifier');
+            if (!codeVerifier) {
+                showError('Authentication session expired. Please try again.');
+                showLoading(false);
+                return;
+            }
+
+            try {
+                console.log('Exchanging code for token...'); // Debug
+                const response = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        code: code,
+                        redirect_uri: REDIRECT_URI,
+                        client_id: CLIENT_ID,
+                        code_verifier: codeVerifier
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error_description || 'Token exchange failed');
+                }
+
+                const tokens = await response.json();
+                
+                // Fetch user for encryption key
+                const userResponse = await fetch('https://api.spotify.com/v1/me', {
+                    headers: { 'Authorization': `Bearer ${tokens.access_token}` }
+                });
+                if (!userResponse.ok) {
+                    throw new Error('Failed to fetch user profile');
+                }
+                const user = await userResponse.json();
+                
+                // Store access token (short-lived)
+                sessionStorage.setItem('access_token', tokens.access_token);
+                sessionStorage.setItem('expires_at', Date.now() + tokens.expires_in * 1000);
+                
+                // Encrypt and store refresh token in localStorage
+                if (tokens.refresh_token) {
+                    try {
+                        const encryptedRefresh = await encryptRefresh(tokens.refresh_token, user.id);
+                        localStorage.setItem('encrypted_refresh_token', encryptedRefresh);
+                        console.log('Refresh token encrypted and stored'); // Debug
+                    } catch (encError) {
+                        console.error('Encryption failed:', encError);
+                        showError('Token storage failed. Session may not persist.');
+                    }
+                }
+                
+                // Generate bootstrap nonce
+                const nonce = Math.random().toString(36).substring(2, 15);
+                sessionStorage.setItem('bootstrap_nonce', nonce);
+                
+                // Clean up
+                sessionStorage.removeItem('code_verifier');
+                
+                // Redirect to the new setup page
+                const setupUrl = new URL('./spotify-setup.html', window.location.href);
+                setupUrl.searchParams.set('bootstrap', nonce);
+                
+                // Preserve country param if present
+                const countryParam = urlParams.get('country');
+                if (countryParam) {
+                    setupUrl.searchParams.set('country', countryParam);
+                }
+                
+                console.log('Redirecting to setup page:', setupUrl.toString()); // Debug
+                window.location.href = setupUrl.toString();
+                
+            } catch (error) {
+                console.error('handleCallback error:', error);
+                showError(`Authentication failed: ${error.message}`);
+                showLoading(false);
+            }
+        }
+
+        // Initiate OAuth flow
+        async function startAuth() {
+            if (!CLIENT_ID || CLIENT_ID === 'REPLACE_ME') {
+                showError('App not configured. CLIENT_ID needs to be set.');
+                return;
+            }
+
+            try {
+                console.log('Starting auth with URI:', REDIRECT_URI); // Debug
+                const codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                
+                sessionStorage.setItem('code_verifier', codeVerifier);
+                
+                const params = new URLSearchParams({
+                    response_type: 'code',
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    redirect_uri: REDIRECT_URI,
+                    code_challenge_method: 'S256',
+                    code_challenge: codeChallenge,
+                    state: Math.random().toString(36)
+                });
+
+                // Preserve country param
+                const urlParams = new URLSearchParams(window.location.search);
+                const countryParam = urlParams.get('country');
+                if (countryParam) {
+                    params.set('state', params.get('state') + '_' + countryParam);
+                }
+                
+                const authUrl = `https://accounts.spotify.com/authorize?${params}`;
+                console.log('Redirecting to Spotify:', authUrl); // Debug
+                window.location.href = authUrl;
+                
+            } catch (error) {
+                console.error('startAuth error:', error);
+                showError(`Failed to start authentication: ${error.message}`);
+            }
+        }
+
+        // Check for existing valid token
+        async function checkExistingAuth() {
+            try {
+                const token = sessionStorage.getItem('access_token');
+                const expiresAt = sessionStorage.getItem('expires_at');
+                
+                if (token && expiresAt && Date.now() < parseInt(expiresAt)) {
+                    // Still have valid token, redirect to game
+                    const nonce = Math.random().toString(36).substring(2, 15);
+                    sessionStorage.setItem('bootstrap_nonce', nonce);
+                    
+                    const gameUrl = new URL(NEXT_URL);
+                    gameUrl.searchParams.set('bootstrap', nonce);
+                    
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const countryParam = urlParams.get('country');
+                    if (countryParam) {
+                        gameUrl.searchParams.set('country', countryParam);
+                    }
+                    
+                    console.log('Existing auth valid, redirecting to:', gameUrl.toString()); // Debug
+                    window.location.href = gameUrl.toString();
+                    return true;
+                }
+            } catch (error) {
+                console.error('checkExistingAuth error:', error);
+            }
+            return false;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('DOM loaded, initializing auth'); // Debug
+                // Check if we have a valid session first
+                if (await checkExistingAuth()) return;
+                
+                // Handle OAuth callback
+                await handleCallback();
+                
+                // Setup login button
+                document.getElementById('spotify-login').addEventListener('click', startAuth);
+                console.log('Login button attached'); // Debug
+            } catch (initError) {
+                console.error('Auth initialization failed:', initError);
+                showError('App failed to load. Please refresh the page.');
+            }
+        });
+    </script>
+</body>
+</html>

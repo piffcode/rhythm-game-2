@@ -7,10 +7,10 @@ const CONFIG = {
   CLIENT_ID: "314f6b8f332041dcb5f678b85acf36ea", // TODO: Replace with your app's CLIENT_ID
   REDIRECT_URI: isLocal
     ? "http://localhost:8000/auth.html"
-    : "https://rhythm-ekgv2wkio-rhythm-games-projects.vercel.app/auth.html",
+    : "rhythm-game-2-5rmpzkawz-rhythm-games-projects.vercel.app/auth.html",
   NEXT_URL: isLocal
     ? "http://localhost:8000/rhythm.html"
-    : "https://rhythm-ekgv2wkio-rhythm-games-projects.vercel.app/rhythm.html",
+    : "rhythm-game-2-5rmpzkawz-rhythm-games-projects.vercel.app/rhythm.html",
   N8N_TELEMETRY_URL: "", // TODO: Replace with your N8N telemetry endpoint
   N8N_COMPLETED_URL: "", // TODO: Replace with your N8N completion endpoint
   DEBUG_MODE: isLocal,

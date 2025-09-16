@@ -2,7 +2,7 @@
 
 // --- Configuration Constants --- TODO: REPLACE THESE VALUES
 const CLIENT_ID = "314f6b8f332041dcb5f678b85acf36ea";
-const REDIRECT_URI = "https://celebrated-gingersnap-9cd743.netlify.app/auth.html";
+const REDIRECT_URI = "rhythm-game-2-5rmpzkawz-rhythm-games-projects.vercel.app";
 
 // --- Core tracks (URIs OR IDs accepted; normalize internally) ---
 const ANCHOR_TRACK = "spotify:track:5FMyXeZ0reYloRTiCkPprT"; // TODO: Replace with your anchor track

@@ -22,7 +22,7 @@ const getBaseUrl = () => {
     // It needs to be prefixed with https://.
     // We will handle the injection of this variable via vercel.json.
     // As a fallback for other environments, use a placeholder.
-    return `https://rhythm-game-2.vercel.app`;
+    return `https://rhythm-game-2-ci1ck1cat-rhythm-games-projects.vercel.app`;
 };
 
 const APP_BASE_URL = getBaseUrl();

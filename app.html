@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="main-container" class="container">
+        
+        <!-- Section 1: Initial Loading -->
+        <div id="loading-view">
+            <div class="logo">🎵</div>
+            <h1>Loading Rhythm Game...</h1>
+            <div class="spinner"></div>
+            <p>Connecting to your Spotify account.</p>
+        </div>
+
+        <!-- Section 2: Device Setup -->
+        <div id="device-view" class="hidden">
+            <div class="logo">🎵</div>
+            <h1>Select a Spotify Device</h1>
+            <p>
+                To play, you need an active Spotify device. The Web Player will be initialized in this browser. If you'd prefer to use another device, please open Spotify and play a song briefly on it.
+            </p>
+            <div id="device-feedback" class="note">Searching for devices...</div>
+            <div id="spotify-player"></div> <!-- Web Playback SDK will attach here -->
+            <button id="check-devices-btn" class="spotify-btn hidden">Check for Devices Again</button>
+        </div>
+
+        <!-- Section 3: Session View -->
+        <div id="session-view" class="hidden">
+            <div class="logo">🎵</div>
+            <h1>Listening Session in Progress</h1>
+            <p>Listen to the tracks below to meet the session goals. Do not skip tracks or interrupt playback.</p>
+            
+            <div class="progress-bar">
+                <div id="session-progress" class="progress-bar-inner"></div>
+            </div>
+            <p id="session-timer" class="note">Total Time: 00:00</p>
+            
+            <div id="track-list">
+                <!-- Track items will be dynamically inserted here -->
+            </div>
+
+            <button id="finish-now-btn" class="spotify-btn hidden">Finish Now</button>
+        </div>
+
+        <!-- Section 4: Completion View -->
+        <div id="completion-view" class="hidden">
+            <div class="logo">🎵</div>
+            <h1>Session Complete!</h1>
+            <p>Congratulations! You have successfully completed the listening session.</p>
+            <p class="note">Here is your unique completion code:</p>
+            <div id="completion-code" class="completion-code"></div>
+        </div>
+
+        <!-- Section 5: Error View -->
+        <div id="error-view" class="hidden">
+            <div class="logo">🎵</div>
+            <h1>An Error Occurred</h1>
+            <div id="error-message" class="error-container"></div>
+            <a href="index.html" class="spotify-btn">Return to Sign In</a>
+        </div>
+    </div>
+
+    <!-- Spotify Web Playback SDK -->
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    
+    <!-- Main Application Logic -->
+    <script src="app.js" type="module"></script>
+</body>
+</html>

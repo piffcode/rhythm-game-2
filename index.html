@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Game - Sign In</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">🎵</div>
+        <h1>Rhythm Game</h1>
+        
+        <div id="error-container" class="error-container"></div>
+        
+        <div id="auth-section">
+            <button id="spotify-login" class="spotify-btn">
+                Sign in with Spotify
+            </button>
+            <div class="note">
+                You'll need Spotify Premium to play full tracks.<br>
+                We only access your basic profile and create a private playlist.
+            </div>
+        </div>
+        
+        <div id="loading-section" class="loading-section" style="display: none;">
+            <div class="spinner"></div>
+            <div class="loading">Connecting to Spotify...</div>
+        </div>
+    </div>
+    
+    <script src="auth.js" type="module"></script>
+</body>
+</html>
